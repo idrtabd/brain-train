@@ -7,6 +7,39 @@ from starlette.middleware.cors import CORSMiddleware
 import httpx
 import os
 from dotenv import load_dotenv
+import sqlite3
+
+
+################################
+# Connect to or create a SQLite database
+conn = sqlite3.connect('braintrain.db')
+# Create a cursor object using the cursor() method
+cursor = conn.cursor()
+
+# Create table
+cursor.execute('''CREATE TABLE IF NOT EXISTS users
+                  (id INTEGER PRIMARY KEY, name TEXT NOT NULL)''')
+# Create table
+cursor.execute('''CREATE TABLE IF NOT EXISTS lessons
+                  (id INTEGER PRIMARY KEY, name TEXT NOT NULL)''')
+
+# Insert a row of data
+cursor.execute("INSERT INTO users (name) VALUES ('Alice')")
+cursor.execute("INSERT INTO users (name) VALUES ('Bob')")
+cursor.execute("INSERT INTO users (name) VALUES ('Charlie')")
+
+# Save (commit) the changes
+conn.commit()
+
+# Select and display all rows in the table
+cursor.execute("SELECT * FROM users")
+print("Users in the database:")
+for row in cursor.fetchall():
+    print(row)
+
+# Close the connection when done
+conn.close()
+################################
 
 app = FastAPI()
 
@@ -93,6 +126,13 @@ async def upload_lesson_text(lessonText: str):
     #for now, generate random number
     lesson_plan_id = random.randint(1, 100000)
     print(f"Lesson Plan ID generated: {lesson_plan_id}")
+    #save the lesson text and id to the database in the lessons table
+    conn = sqlite3.connect('braintrain.db')
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO lessons (lesson_plan_id, lesson_text) VALUES (?, ?)", (lesson_plan_id, lessonText))
+    conn.commit()
+    conn.close()
+    
     return {"Lesson Plan ID": lesson_plan_id, "Lesson Text": lessonText}
 
 #GET request to get the prepared lesson plan, arguments are lesson plan id
@@ -101,5 +141,11 @@ async def get_lesson_plan(lessonPlanId: int):
     #LOG THE LESSON PLAN ID and return the same
     print(f" =============== LOGGING =================")
     print(f"Lesson Plan ID received: {lessonPlanId}")
+    #Get the lesson plan from the database using the lesson plan id
+    conn = sqlite3.connect('braintrain.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT lesson_text FROM lessons WHERE lesson_plan_id=?", (lessonPlanId,))
+    lesson_text = cursor.fetchone()
+    conn.close()
     #return the lesson plan
-    return {"Lesson Plan ID": lessonPlanId, "Lesson Plan": "This is the lesson plan for the lesson plan id " + str(lessonPlanId)}
+    return {"Lesson Plan ID": lessonPlanId, "Lesson Plan": lesson_text}
