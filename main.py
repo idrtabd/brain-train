@@ -19,17 +19,18 @@ cursor = conn.cursor()
 # Create table
 cursor.execute('''CREATE TABLE IF NOT EXISTS users
                   (id INTEGER PRIMARY KEY, name TEXT NOT NULL)''')
-# Create table
-cursor.execute('''CREATE TABLE IF NOT EXISTS lessons
-                  (id INTEGER PRIMARY KEY, name TEXT NOT NULL)''')
+# Create table lessons, make the id autoincrement
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS lessons3 (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lesson_text TEXT
+    )
+''')
 
-# Insert a row of data
-cursor.execute("INSERT INTO users (name) VALUES ('Alice')")
-cursor.execute("INSERT INTO users (name) VALUES ('Bob')")
-cursor.execute("INSERT INTO users (name) VALUES ('Charlie')")
+
+conn.commit()
 
 # Save (commit) the changes
-conn.commit()
 
 # Select and display all rows in the table
 cursor.execute("SELECT * FROM users")
@@ -124,12 +125,13 @@ async def upload_lesson_text(lessonText: str):
     print(f"Lesson Text received: {lessonText}")
     #return a unique lesson plan id for further use to reference
     #for now, generate random number
-    lesson_plan_id = random.randint(1, 100000)
-    print(f"Lesson Plan ID generated: {lesson_plan_id}")
+    # lesson_plan_id = random.randint(1, 1000000)
     #save the lesson text and id to the database in the lessons table
     conn = sqlite3.connect('braintrain.db')
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO lessons (lesson_plan_id, lesson_text) VALUES (?, ?)", (lesson_plan_id, lessonText))
+    cursor.execute("INSERT INTO lessons3 (lesson_text) VALUES (?)", (lessonText,))
+    # get the last row id
+    lesson_plan_id = cursor.lastrowid
     conn.commit()
     conn.close()
     
@@ -137,15 +139,20 @@ async def upload_lesson_text(lessonText: str):
 
 #GET request to get the prepared lesson plan, arguments are lesson plan id
 @app.get("/GetLessonPlan")
+
 async def get_lesson_plan(lessonPlanId: int):
-    #LOG THE LESSON PLAN ID and return the same
-    print(f" =============== LOGGING =================")
-    print(f"Lesson Plan ID received: {lessonPlanId}")
-    #Get the lesson plan from the database using the lesson plan id
-    conn = sqlite3.connect('braintrain.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT lesson_text FROM lessons WHERE lesson_plan_id=?", (lessonPlanId,))
-    lesson_text = cursor.fetchone()
-    conn.close()
-    #return the lesson plan
-    return {"Lesson Plan ID": lessonPlanId, "Lesson Plan": lesson_text}
+    try:
+        # LOG THE LESSON PLAN ID and return the same
+        print(f" =============== LOGGING =================")
+        print(f"Lesson Plan ID received: {lessonPlanId}")
+        # Get the lesson plan from the database using the lesson plan id
+        conn = sqlite3.connect('braintrain.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT lesson_text FROM lessons3 WHERE id=?", (lessonPlanId,))
+        lesson_text = cursor.fetchone()
+        conn.close()
+        # return the lesson plan
+        return {"Lesson Plan ID": lessonPlanId, "Lesson Plan": lesson_text}
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return {"error": str(e)}
