@@ -15,7 +15,8 @@ import sqlite3
 conn = sqlite3.connect('braintrain.db')
 # Create a cursor object using the cursor() method
 cursor = conn.cursor()
-
+cursor.execute("DROP TABLE IF EXISTS lessons")
+cursor.execute("DROP TABLE IF EXISTS lessons2")
 # Create table
 cursor.execute('''CREATE TABLE IF NOT EXISTS users
                   (id INTEGER PRIMARY KEY, name TEXT NOT NULL)''')
